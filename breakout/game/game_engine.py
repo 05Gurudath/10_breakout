@@ -1,11 +1,11 @@
 """
 GameEngine: owns the paddle, ball, and bricks.
 
-Starter version: single brick type, no lives yet, no score/combo yet.
-Ball-brick collision also has a known bug (see game/collision.py) that
-Task 1 asks you to fix. If the ball falls below the paddle, it just
-resets to the starting position with no consequence - that's what
-Task 2 builds on.
+Implemented tasks:
+Task 1 - Brick collision and destruction
+Task 2 - 3 lives, Game Over, and restart
+Task 3 - Normal, Strong, and Unbreakable bricks
+Task 4 - Score and combo multiplier
 """
 
 import pygame
@@ -27,13 +27,25 @@ BRICK_TOP_MARGIN = 50
 
 class GameEngine:
     def __init__(self):
-        self.paddle = Paddle(x=WIDTH / 2, y=HEIGHT - 30)
-        self.ball = Ball(x=WIDTH / 2, y=HEIGHT - 50)
+        self.paddle = Paddle(
+            x=WIDTH / 2,
+            y=HEIGHT - 30
+        )
+
+        self.ball = Ball(
+            x=WIDTH / 2,
+            y=HEIGHT - 50
+        )
+
         self.bricks = self._build_bricks()
 
-        # Task 2: lives system
+        # Task 2: Lives
         self.lives = 3
         self.game_over = False
+
+        # Task 4: Score and combo
+        self.score = 0
+        self.combo = 1
 
     def _build_bricks(self):
         bricks = []
@@ -48,7 +60,10 @@ class GameEngine:
         for row in range(BRICK_ROWS):
             for col in range(BRICK_COLS):
 
-                x = start_x + col * (BRICK_WIDTH + BRICK_GAP)
+                x = start_x + col * (
+                    BRICK_WIDTH + BRICK_GAP
+                )
+
                 y = BRICK_TOP_MARGIN + row * (
                     BRICK_HEIGHT + BRICK_GAP
                 )
@@ -99,8 +114,13 @@ class GameEngine:
 
         self.bricks = self._build_bricks()
 
+        # Reset lives
         self.lives = 3
         self.game_over = False
+
+        # Reset score and combo
+        self.score = 0
+        self.combo = 1
 
     def handle_input(self, keys_pressed):
 
@@ -126,7 +146,7 @@ class GameEngine:
 
     def update(self):
 
-        # Stop updating the game after Game Over
+        # Stop updating after Game Over
         if self.game_over:
             return
 
@@ -164,18 +184,41 @@ class GameEngine:
                 # -----------------------------------------
 
                 if brick.brick_type == Brick.UNBREAKABLE:
-                    # It can be hit but is never destroyed.
+                    # Unbreakable bricks don't affect score
+                    # or combo.
                     break
 
                 # -----------------------------------------
-                # Normal / Strong brick
+                # Reduce brick hits
                 # -----------------------------------------
 
                 brick.hits_remaining -= 1
 
-                # Remove brick when all hits are used.
+                # -----------------------------------------
+                # Brick destroyed
+                # -----------------------------------------
+
                 if brick.hits_remaining <= 0:
+
+                    # Remove the brick
                     self.bricks.remove(brick)
+
+                    # Task 4: scoring
+                    if brick.brick_type == Brick.NORMAL:
+                        base_points = 10
+
+                    elif brick.brick_type == Brick.STRONG:
+                        base_points = 30
+
+                    else:
+                        base_points = 10
+
+                    # Apply combo multiplier
+                    self.score += base_points * self.combo
+
+                    # Increase combo for the next
+                    # consecutive destroyed brick
+                    self.combo += 1
 
                 break
 
@@ -185,7 +228,11 @@ class GameEngine:
 
         if self.ball.is_below(HEIGHT):
 
+            # Lose one life
             self.lives -= 1
+
+            # Task 4: reset combo after missing
+            self.combo = 1
 
             if self.lives <= 0:
                 self.game_over = True
@@ -224,6 +271,28 @@ class GameEngine:
             font,
             f"Lives: {self.lives}",
             (10, 35)
+        )
+
+        # -------------------------------------------------
+        # Score
+        # -------------------------------------------------
+
+        renderer.draw_text(
+            surface,
+            font,
+            f"Score: {self.score}",
+            (10, 60)
+        )
+
+        # -------------------------------------------------
+        # Combo
+        # -------------------------------------------------
+
+        renderer.draw_text(
+            surface,
+            font,
+            f"Combo: x{self.combo}",
+            (10, 85)
         )
 
         # -------------------------------------------------
