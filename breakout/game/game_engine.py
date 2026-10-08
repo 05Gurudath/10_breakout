@@ -7,6 +7,7 @@ Task 1 asks you to fix. If the ball falls below the paddle, it just
 resets to the starting position with no consequence - that's what
 Task 2 builds on.
 """
+
 import pygame
 
 from game.paddle import Paddle
@@ -36,20 +37,42 @@ class GameEngine:
 
     def _build_bricks(self):
         bricks = []
-        total_width = BRICK_COLS * (BRICK_WIDTH + BRICK_GAP) - BRICK_GAP
+
+        total_width = (
+            BRICK_COLS * (BRICK_WIDTH + BRICK_GAP)
+            - BRICK_GAP
+        )
+
         start_x = (WIDTH - total_width) / 2
 
         for row in range(BRICK_ROWS):
             for col in range(BRICK_COLS):
+
                 x = start_x + col * (BRICK_WIDTH + BRICK_GAP)
-                y = BRICK_TOP_MARGIN + row * (BRICK_HEIGHT + BRICK_GAP)
+                y = BRICK_TOP_MARGIN + row * (
+                    BRICK_HEIGHT + BRICK_GAP
+                )
+
+                # Task 3:
+                # Row 0 -> Unbreakable
+                # Row 1 -> Strong
+                # Rows 2-3 -> Normal
+                if row == 0:
+                    brick_type = Brick.UNBREAKABLE
+
+                elif row == 1:
+                    brick_type = Brick.STRONG
+
+                else:
+                    brick_type = Brick.NORMAL
 
                 bricks.append(
                     Brick(
                         x,
                         y,
                         BRICK_WIDTH,
-                        BRICK_HEIGHT
+                        BRICK_HEIGHT,
+                        brick_type
                     )
                 )
 
@@ -63,14 +86,25 @@ class GameEngine:
 
     def restart(self):
         """Restart the game after Game Over."""
-        self.paddle = Paddle(x=WIDTH / 2, y=HEIGHT - 30)
-        self.ball = Ball(x=WIDTH / 2, y=HEIGHT - 50)
+
+        self.paddle = Paddle(
+            x=WIDTH / 2,
+            y=HEIGHT - 30
+        )
+
+        self.ball = Ball(
+            x=WIDTH / 2,
+            y=HEIGHT - 50
+        )
+
         self.bricks = self._build_bricks()
+
         self.lives = 3
         self.game_over = False
 
     def handle_input(self, keys_pressed):
-        # Don't move the paddle after Game Over
+
+        # Don't move paddle after Game Over
         if self.game_over:
             return
 
@@ -85,48 +119,82 @@ class GameEngine:
         self.paddle.move(dx, WIDTH)
 
     def handle_keydown(self, key):
+
         # Press R to restart after Game Over
         if self.game_over and key == pygame.K_r:
             self.restart()
 
     def update(self):
+
         # Stop updating the game after Game Over
         if self.game_over:
             return
 
         self.ball.update()
+
         self.ball.bounce_off_walls(WIDTH)
 
+        # -------------------------------------------------
         # Ball-paddle collision
+        # -------------------------------------------------
+
         if (
-            self.ball.get_rect().colliderect(self.paddle.get_rect())
+            self.ball.get_rect().colliderect(
+                self.paddle.get_rect()
+            )
             and self.ball.vy > 0
         ):
             self.ball.bounce_off_paddle(
                 self.paddle.get_rect()
             )
 
+        # -------------------------------------------------
         # Ball-brick collision
+        # -------------------------------------------------
+
         for brick in self.bricks:
-            if handle_ball_brick_collision(self.ball, brick):
+
+            if handle_ball_brick_collision(
+                self.ball,
+                brick
+            ):
+
+                # -----------------------------------------
+                # Unbreakable brick
+                # -----------------------------------------
+
+                if brick.brick_type == Brick.UNBREAKABLE:
+                    # It can be hit but is never destroyed.
+                    break
+
+                # -----------------------------------------
+                # Normal / Strong brick
+                # -----------------------------------------
+
                 brick.hits_remaining -= 1
 
-                # Task 1: remove destroyed brick
+                # Remove brick when all hits are used.
                 if brick.hits_remaining <= 0:
                     self.bricks.remove(brick)
 
                 break
 
-        # Task 2: lose a life when the ball falls below the screen
+        # -------------------------------------------------
+        # Ball falls below the screen
+        # -------------------------------------------------
+
         if self.ball.is_below(HEIGHT):
+
             self.lives -= 1
 
             if self.lives <= 0:
                 self.game_over = True
+
             else:
                 self._reset_ball()
 
     def draw(self, surface, font):
+
         from game import renderer
 
         renderer.draw_scene(
@@ -136,7 +204,10 @@ class GameEngine:
             self.bricks
         )
 
-        # Display bricks left
+        # -------------------------------------------------
+        # Bricks remaining
+        # -------------------------------------------------
+
         renderer.draw_text(
             surface,
             font,
@@ -144,7 +215,10 @@ class GameEngine:
             (10, 10)
         )
 
-        # Display lives
+        # -------------------------------------------------
+        # Lives
+        # -------------------------------------------------
+
         renderer.draw_text(
             surface,
             font,
@@ -152,8 +226,12 @@ class GameEngine:
             (10, 35)
         )
 
-        # Display Game Over
+        # -------------------------------------------------
+        # Game Over
+        # -------------------------------------------------
+
         if self.game_over:
+
             renderer.draw_text(
                 surface,
                 font,
